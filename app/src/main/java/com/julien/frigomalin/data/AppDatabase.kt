@@ -1,6 +1,5 @@
 package com.julien.frigomalin.data
 
-import android.content.Context
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
@@ -29,21 +28,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun ingredientDao(): IngredientDao
     abstract fun recetteDao(): RecetteDao
     abstract fun planningDao(): PlanningDao
-
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
-
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = androidx.room.Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "frigo_malin_database"
-                ).build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
 }

@@ -44,11 +44,4 @@ interface RecetteDao {
 
     @Query("DELETE FROM recette_ingredients WHERE recetteId = :recetteId")
     suspend fun deleteIngredientsDeRecette(recetteId: Long)
-
-    @Transaction
-    suspend fun insertRecetteComplete(recette: Recette, ingredients: List<RecetteIngredient>): Long {
-        val recetteId = insertRecette(recette)
-        insertIngredientsRecette(ingredients.map { it.copy(recetteId = recetteId) })
-        return recetteId
-    }
 }

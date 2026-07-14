@@ -3,13 +3,13 @@ package com.julien.frigomalin.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "recettes")
-data class Recette(
+@Entity(tableName = "ingredients")
+data class Ingredient(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val nom: String,
-    val instructions: String,
-    val tempsPreparationMinutes: Int,
-    val portions: Int,
-    val estPersonnalisee: Boolean = false   // false = pré-remplie, true = ajoutée par l'utilisateur
+    val quantite: Double,
+    val unite: String,              // ex: "g", "ml", "unité", "kg", "L"
+    val datePeremption: Long?,      // epoch millis, nullable si pas de péremption
+    val dateAjout: Long = System.currentTimeMillis()
 )

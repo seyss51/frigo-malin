@@ -5,15 +5,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.julien.frigomalin.data.Ingredient
 import com.julien.frigomalin.data.IngredientRepository
+import com.julien.frigomalin.data.Recette
 import com.julien.frigomalin.data.RecetteAvecIngredients
+import com.julien.frigomalin.data.RecetteIngredient
 import com.julien.frigomalin.data.RecetteRepository
 import com.julien.frigomalin.suggestion.RecetteSuggestionEngine
 import com.julien.frigomalin.suggestion.SuggestionRecette
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 
 class FrigoViewModel(
@@ -41,6 +43,12 @@ class FrigoViewModel(
     fun supprimerIngredient(ingredient: Ingredient) {
         viewModelScope.launch {
             ingredientRepository.delete(ingredient)
+        }
+    }
+
+    fun ajouterRecette(recette: Recette, ingredients: List<RecetteIngredient>) {
+        viewModelScope.launch {
+            recetteRepository.insertRecetteComplete(recette, ingredients)
         }
     }
 

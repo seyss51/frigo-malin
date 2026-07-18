@@ -7,17 +7,20 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import com.julien.frigomalin.ui.screens.AjouterIngredientScreen
+import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.viewmodel.FrigoViewModel
 import kotlinx.coroutines.flow.collectAsStateWithLifecycle
+
+private enum class Ecran { STOCK, SUGGESTIONS, AJOUT_INGREDIENT, AJOUT_RECETTE }
 
 class MainActivity : ComponentActivity() {
 
@@ -40,38 +43,66 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FrigoMalinApp(viewModel: FrigoViewModel) {
-    var ongletSelectionne by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var ecranActif by remember { mutableStateOf(Ecran.STOCK) }
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+
+    when (ecranActif) {
+        Ecran.AJOUT_INGREDIENT -> {
+            AjouterIngredientScreen(
+                onRetour = { ecranActif = Ecran.STOCK },
+                onEnregistrer = { viewModel.ajouterIngredient(it) }
+            )
+            return
+        }
+        Ecran.AJOUT_RECETTE -> {
+            AjouterRecetteScreen(
+                onRetour = { ecranActif = Ecran.SUGGESTIONS },
+                onEnregistrer = { recette, ingredients -> viewModel.ajouterRecette(recette, ingredients) }
+            )
+            return
+        }
+        else -> Unit
+    }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = ongletSelectionne == 0,
-                    onClick = { ongletSelectionne = 0 },
+                    selected = ecranActif == Ecran.STOCK,
+                    onClick = { ecranActif = Ecran.STOCK },
                     icon = { Icon(Icons.Default.Kitchen, contentDescription = "Stock") },
                     label = { Text("Stock") }
                 )
                 NavigationBarItem(
-                    selected = ongletSelectionne == 1,
-                    onClick = { ongletSelectionne = 1 },
+                    selected = ecranActif == Ecran.SUGGESTIONS,
+                    onClick = { ecranActif = Ecran.SUGGESTIONS },
                     icon = { Icon(Icons.Default.Restaurant, contentDescription = "Suggestions") },
                     label = { Text("Suggestions") }
                 )
             }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    ecranActif = if (ecranActif == Ecran.STOCK) Ecran.AJOUT_INGREDIENT else Ecran.AJOUT_RECETTE
+                }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Ajouter")
+            }
         }
     ) { padding ->
-        when (ongletSelectionne) {
-            0 -> StockScreen(
+        when (ecranActif) {
+            Ecran.STOCK -> StockScreen(
                 stock = stock,
                 onSupprimer = { viewModel.supprimerIngredient(it) },
                 modifier = Modifier.padding(padding)
             )
-            1 -> SuggestionsScreen(
+            Ecran.SUGGESTIONS -> SuggestionsScreen(
                 suggestions = suggestions,
                 modifier = Modifier.padding(padding)
             )
+            else -> Unit
         }
     }
 }

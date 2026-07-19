@@ -1,6 +1,5 @@
 package com.julien.frigomalin
 
-import kotlinx.coroutines.flow.collectAsStateWithLifecycle
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,7 +19,7 @@ import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.viewmodel.FrigoViewModel
-import kotlinx.coroutines.flow.collectAsStateWithLifecycle
+import import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private enum class Ecran { STOCK, SUGGESTIONS, AJOUT_INGREDIENT, AJOUT_RECETTE }
 

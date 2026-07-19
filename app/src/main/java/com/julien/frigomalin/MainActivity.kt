@@ -19,7 +19,7 @@ import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.viewmodel.FrigoViewModel
-import import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private enum class Ecran { STOCK, SUGGESTIONS, AJOUT_INGREDIENT, AJOUT_RECETTE }
 

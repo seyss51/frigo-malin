@@ -2,13 +2,12 @@ package com.julien.frigomalin.data
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-/**
- * Fournit l'instance singleton de la base de données.
- * Séparé de AppDatabase.kt : une classe annotée @Database contenant
- * elle-même du code exécutable (companion object avec logique) fait
- * échouer la résolution de types de KSP (erreur MissingType trompeuse).
- */
 object DatabaseProvider {
     @Volatile
     private var INSTANCE: AppDatabase? = null
@@ -19,7 +18,16 @@ object DatabaseProvider {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "frigo_malin_database"
-            ).build()
+            )
+                .addCallback(object : RoomDatabase.Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            peuplerRecettesInitiales(getDatabase(context).recetteDao())
+                        }
+                    }
+                })
+                .build()
             INSTANCE = instance
             instance
         }

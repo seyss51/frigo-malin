@@ -9,7 +9,9 @@ import com.julien.frigomalin.data.Recette
 import com.julien.frigomalin.data.RecetteAvecIngredients
 import com.julien.frigomalin.data.RecetteIngredient
 import com.julien.frigomalin.data.RecetteRepository
+import com.julien.frigomalin.suggestion.ArticleCourse
 import com.julien.frigomalin.suggestion.RecetteSuggestionEngine
+import com.julien.frigomalin.suggestion.ShoppingListGenerator
 import com.julien.frigomalin.suggestion.SuggestionRecette
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +35,22 @@ class FrigoViewModel(
     val suggestions: StateFlow<List<SuggestionRecette>> = combine(stock, recettes) { s, r ->
         RecetteSuggestionEngine.suggerer(s, r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val recetteSelectionneeId = MutableStateFlow<Long?>(null)
+
+    val recetteSelectionnee: StateFlow<RecetteAvecIngredients?> =
+        combine(recettes, recetteSelectionneeId) { liste, id ->
+            liste.firstOrNull { it.recette.id == id }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val listeCourses: StateFlow<List<ArticleCourse>> =
+        combine(recetteSelectionnee, stock) { recette, stockActuel ->
+            recette?.let { ShoppingListGenerator.genererPour(it.ingredients, stockActuel) } ?: emptyList()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectionnerRecette(id: Long) {
+        recetteSelectionneeId.value = id
+    }
 
     fun ajouterIngredient(ingredient: Ingredient) {
         viewModelScope.launch {

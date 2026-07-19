@@ -1,6 +1,5 @@
 package com.julien.frigomalin
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,14 +13,15 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.julien.frigomalin.ui.screens.AjouterIngredientScreen
 import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
+import com.julien.frigomalin.ui.screens.RecetteDetailScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.viewmodel.FrigoViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-private enum class Ecran { STOCK, SUGGESTIONS, AJOUT_INGREDIENT, AJOUT_RECETTE }
+private enum class Ecran { STOCK, SUGGESTIONS, AJOUT_INGREDIENT, AJOUT_RECETTE, DETAIL_RECETTE }
 
 class MainActivity : ComponentActivity() {
 
@@ -47,6 +47,8 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
     var ecranActif by remember { mutableStateOf(Ecran.STOCK) }
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val recetteSelectionnee by viewModel.recetteSelectionnee.collectAsStateWithLifecycle()
+    val listeCourses by viewModel.listeCourses.collectAsStateWithLifecycle()
 
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
@@ -60,6 +62,14 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
             AjouterRecetteScreen(
                 onRetour = { ecranActif = Ecran.SUGGESTIONS },
                 onEnregistrer = { recette, ingredients -> viewModel.ajouterRecette(recette, ingredients) }
+            )
+            return
+        }
+        Ecran.DETAIL_RECETTE -> {
+            RecetteDetailScreen(
+                recette = recetteSelectionnee,
+                listeCourses = listeCourses,
+                onRetour = { ecranActif = Ecran.SUGGESTIONS }
             )
             return
         }
@@ -101,6 +111,10 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
             )
             Ecran.SUGGESTIONS -> SuggestionsScreen(
                 suggestions = suggestions,
+                onSelectionner = { id ->
+                    viewModel.selectionnerRecette(id)
+                    ecranActif = Ecran.DETAIL_RECETTE
+                },
                 modifier = Modifier.padding(padding)
             )
             else -> Unit

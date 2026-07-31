@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.julien.frigomalin.data.RecetteAvecIngredients
@@ -16,7 +19,9 @@ import com.julien.frigomalin.suggestion.ArticleCourse
 @Composable
 fun RecetteDetailScreen(
     recette: RecetteAvecIngredients?,
+    portions: Int,
     listeCourses: List<ArticleCourse>,
+    onPortionsChange: (Int) -> Unit,
     onRetour: () -> Unit
 ) {
     Scaffold(
@@ -38,6 +43,9 @@ fun RecetteDetailScreen(
             return@Scaffold
         }
 
+        val base = recette.recette.portions.coerceAtLeast(1)
+        val facteur = portions.toDouble() / base
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -47,13 +55,37 @@ fun RecetteDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "${recette.recette.tempsPreparationMinutes} min · ${recette.recette.portions} portions",
+                "${recette.recette.tempsPreparationMinutes} min",
                 style = MaterialTheme.typography.bodyMedium
             )
 
+            Card {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Nombre de personnes", style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { onPortionsChange(portions - 1) }) {
+                            Icon(Icons.Default.Remove, contentDescription = "Moins")
+                        }
+                        Text(
+                            "$portions",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        IconButton(onClick = { onPortionsChange(portions + 1) }) {
+                            Icon(Icons.Default.Add, contentDescription = "Plus")
+                        }
+                    }
+                }
+            }
+
             Text("Ingrédients", style = MaterialTheme.typography.titleMedium)
             recette.ingredients.forEach { ing ->
-                Text("• ${ing.quantiteNecessaire} ${ing.unite} ${ing.nomIngredient}")
+                val quantiteAjustee = arrondir(ing.quantiteNecessaire * facteur)
+                Text("• $quantiteAjustee ${ing.unite} ${ing.nomIngredient}")
             }
 
             Text("Instructions", style = MaterialTheme.typography.titleMedium)
@@ -65,7 +97,7 @@ fun RecetteDetailScreen(
                 listeCourses.forEach { article ->
                     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Text(
-                            "${article.nom} — ${article.quantiteManquante} ${article.unite}",
+                            "${article.nom} — ${arrondir(article.quantiteManquante)} ${article.unite}",
                             modifier = Modifier.padding(12.dp)
                         )
                     }
@@ -77,5 +109,13 @@ fun RecetteDetailScreen(
                 )
             }
         }
+    }
+}
+
+private fun arrondir(valeur: Double): String {
+    return if (valeur == valeur.toInt().toDouble()) {
+        valeur.toInt().toString()
+    } else {
+        "%.1f".format(valeur)
     }
 }

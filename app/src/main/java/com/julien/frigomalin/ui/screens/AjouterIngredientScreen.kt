@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -19,21 +18,26 @@ private const val MILLIS_PAR_JOUR = 24 * 60 * 60 * 1000L
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AjouterIngredientScreen(
+    ingredientExistant: Ingredient? = null,
     onRetour: () -> Unit,
     onEnregistrer: (Ingredient) -> Unit
 ) {
-    var nom by remember { mutableStateOf("") }
-    var quantite by remember { mutableStateOf("") }
-    var unite by remember { mutableStateOf("g") }
-    var joursAvantPeremption by remember { mutableStateOf("") }
+    var nom by remember { mutableStateOf(ingredientExistant?.nom ?: "") }
+    var quantite by remember { mutableStateOf(ingredientExistant?.quantite?.toString() ?: "") }
+    var unite by remember { mutableStateOf(ingredientExistant?.unite ?: "g") }
+    val joursInitiaux = ingredientExistant?.datePeremption?.let {
+        ((it - System.currentTimeMillis()) / MILLIS_PAR_JOUR).toInt().coerceAtLeast(0).toString()
+    } ?: ""
+    var joursAvantPeremption by remember { mutableStateOf(joursInitiaux) }
     var uniteMenuOuvert by remember { mutableStateOf(false) }
 
     val unitesDisponibles = listOf("g", "kg", "ml", "L", "unité")
+    val estEdition = ingredientExistant != null
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ajouter un ingrédient") },
+                title = { Text(if (estEdition) "Modifier l'ingrédient" else "Ajouter un ingrédient") },
                 navigationIcon = {
                     IconButton(onClick = onRetour) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
@@ -113,17 +117,19 @@ fun AjouterIngredientScreen(
 
                     onEnregistrer(
                         Ingredient(
+                            id = ingredientExistant?.id ?: 0,
                             nom = nom.trim(),
                             quantite = quantiteValeur,
                             unite = unite,
-                            datePeremption = datePeremption
+                            datePeremption = datePeremption,
+                            dateAjout = ingredientExistant?.dateAjout ?: System.currentTimeMillis()
                         )
                     )
                     onRetour()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Enregistrer")
+                Text(if (estEdition) "Mettre à jour" else "Enregistrer")
             }
         }
     }

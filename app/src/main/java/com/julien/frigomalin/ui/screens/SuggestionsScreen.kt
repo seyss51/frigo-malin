@@ -14,7 +14,7 @@ import com.julien.frigomalin.suggestion.SuggestionRecette
 @Composable
 fun SuggestionsScreen(
     suggestions: List<SuggestionRecette>,
-    onSelectionner: (Long) -> Unit,
+    onSelectionner: (id: Long, portionsParDefaut: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (suggestions.isEmpty()) {
@@ -30,7 +30,7 @@ fun SuggestionsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clickable { onSelectionner(suggestion.recette.id) }
+                    .clickable { onSelectionner(suggestion.recette.id, suggestion.recette.portions) }
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(

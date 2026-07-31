@@ -14,10 +14,13 @@ object ShoppingListGenerator {
     /**
      * Génère la liste des ingrédients manquants pour une recette donnée,
      * en tenant compte des quantités déjà présentes en stock.
+     * @param facteur multiplicateur appliqué aux quantités (ex: 1.5 pour 6 personnes
+     *   sur une recette prévue pour 4)
      */
     fun genererPour(
         ingredientsNecessaires: List<RecetteIngredient>,
-        stock: List<Ingredient>
+        stock: List<Ingredient>,
+        facteur: Double = 1.0
     ): List<ArticleCourse> {
         val stockParNom = stock.groupBy { normaliser(it.nom) }
 
@@ -25,7 +28,8 @@ object ShoppingListGenerator {
             val disponible = stockParNom[normaliser(besoin.nomIngredient)]
                 ?.sumOf { it.quantite } ?: 0.0
 
-            val manquant = besoin.quantiteNecessaire - disponible
+            val quantiteAjustee = besoin.quantiteNecessaire * facteur
+            val manquant = quantiteAjustee - disponible
             if (manquant > 0) {
                 ArticleCourse(besoin.nomIngredient, manquant, besoin.unite)
             } else {
@@ -34,10 +38,6 @@ object ShoppingListGenerator {
         }
     }
 
-    /**
-     * Fusionne plusieurs listes de courses (plusieurs recettes) en additionnant
-     * les quantités des ingrédients en commun.
-     */
     fun fusionner(listes: List<List<ArticleCourse>>): List<ArticleCourse> {
         return listes.flatten()
             .groupBy { normaliser(it.nom) to it.unite }

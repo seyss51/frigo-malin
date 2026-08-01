@@ -11,5 +11,6 @@ data class Recette(
     val instructions: String,
     val tempsPreparationMinutes: Int,
     val portions: Int,
-    val estPersonnalisee: Boolean = false   // false = pré-remplie, true = ajoutée par l'utilisateur
+    val estPersonnalisee: Boolean = false,
+    val photoPath: String? = null
 )

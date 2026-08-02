@@ -1,8 +1,12 @@
 package com.julien.frigomalin
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,21 +15,31 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.julien.frigomalin.data.BackupManager
 import com.julien.frigomalin.data.Ingredient
 import com.julien.frigomalin.ui.screens.AjouterIngredientScreen
 import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
+import com.julien.frigomalin.ui.screens.ParametresScreen
 import com.julien.frigomalin.ui.screens.PlanningScreen
 import com.julien.frigomalin.ui.screens.RecetteDetailScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.ui.theme.FrigoMalinTheme
 import com.julien.frigomalin.viewmodel.FrigoViewModel
+import kotlinx.coroutines.launch
 
-private enum class Ecran { STOCK, SUGGESTIONS, PLANNING, AJOUT_INGREDIENT, MODIF_INGREDIENT, AJOUT_RECETTE, DETAIL_RECETTE }
+private enum class Ecran {
+    STOCK, SUGGESTIONS, PLANNING, PARAMETRES,
+    AJOUT_INGREDIENT, MODIF_INGREDIENT,
+    AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -39,7 +53,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FrigoMalinTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    FrigoMalinApp(viewModel)
+                    FrigoMalinApp(viewModel, onRedemarrer = { recreate() })
                 }
             }
         }
@@ -47,7 +61,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FrigoMalinApp(viewModel: FrigoViewModel) {
+fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     var ecranActif by remember { mutableStateOf(Ecran.STOCK) }
     var ingredientEnEdition by remember { mutableStateOf<Ingredient?>(null) }
 
@@ -58,6 +75,30 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
     val listeCourses by viewModel.listeCourses.collectAsStateWithLifecycle()
     val toutesLesRecettes by viewModel.toutesLesRecettes.collectAsStateWithLifecycle()
     val semaine by viewModel.semaineActuelle.collectAsStateWithLifecycle()
+
+    val selecteurImportZip = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val succes = BackupManager.importerSauvegarde(context, uri)
+                if (succes) onRedemarrer()
+            }
+        }
+    }
+
+    fun exporterEtPartager() {
+        scope.launch {
+            val fichier = BackupManager.exporterSauvegarde(context)
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", fichier)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Exporter la sauvegarde"))
+        }
+    }
 
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
@@ -78,7 +119,15 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
         Ecran.AJOUT_RECETTE -> {
             AjouterRecetteScreen(
                 onRetour = { ecranActif = Ecran.SUGGESTIONS },
-                onEnregistrer = { recette, ingredients -> viewModel.ajouterRecette(recette, ingredients) }
+                onEnregistrer = { recette, ingredients -> viewModel.enregistrerRecette(recette, ingredients) }
+            )
+            return
+        }
+        Ecran.MODIF_RECETTE -> {
+            AjouterRecetteScreen(
+                recetteExistante = recetteSelectionnee,
+                onRetour = { ecranActif = Ecran.DETAIL_RECETTE },
+                onEnregistrer = { recette, ingredients -> viewModel.enregistrerRecette(recette, ingredients) }
             )
             return
         }
@@ -88,6 +137,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
                 portions = portionsActuelles,
                 listeCourses = listeCourses,
                 onPortionsChange = { viewModel.definirPortions(it) },
+                onModifier = { ecranActif = Ecran.MODIF_RECETTE },
                 onRetour = { ecranActif = Ecran.SUGGESTIONS }
             )
             return
@@ -115,6 +165,12 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
                     onClick = { ecranActif = Ecran.PLANNING },
                     icon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Planning") },
                     label = { Text("Planning") }
+                )
+                NavigationBarItem(
+                    selected = ecranActif == Ecran.PARAMETRES,
+                    onClick = { ecranActif = Ecran.PARAMETRES },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Réglages") },
+                    label = { Text("Réglages") }
                 )
             }
         },
@@ -153,6 +209,11 @@ fun FrigoMalinApp(viewModel: FrigoViewModel) {
                 recettes = toutesLesRecettes,
                 onAssigner = { date, type, recetteId -> viewModel.assignerRepas(date, type, recetteId) },
                 onRetirer = { viewModel.retirerRepas(it) },
+                modifier = Modifier.padding(padding)
+            )
+            Ecran.PARAMETRES -> ParametresScreen(
+                onExporter = { exporterEtPartager() },
+                onImporter = { selecteurImportZip.launch(arrayOf("application/zip", "*/*")) },
                 modifier = Modifier.padding(padding)
             )
             else -> Unit

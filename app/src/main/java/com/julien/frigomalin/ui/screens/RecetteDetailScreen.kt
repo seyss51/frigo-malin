@@ -2,18 +2,24 @@ package com.julien.frigomalin.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.julien.frigomalin.data.RecetteAvecIngredients
 import com.julien.frigomalin.suggestion.ArticleCourse
+import com.julien.frigomalin.util.PhotoStorage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,8 +28,11 @@ fun RecetteDetailScreen(
     portions: Int,
     listeCourses: List<ArticleCourse>,
     onPortionsChange: (Int) -> Unit,
+    onModifier: () -> Unit,
     onRetour: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -31,6 +40,13 @@ fun RecetteDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onRetour) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                },
+                actions = {
+                    if (recette != null) {
+                        IconButton(onClick = onModifier) {
+                            Icon(Icons.Default.Edit, contentDescription = "Modifier")
+                        }
                     }
                 }
             )
@@ -45,6 +61,7 @@ fun RecetteDetailScreen(
 
         val base = recette.recette.portions.coerceAtLeast(1)
         val facteur = portions.toDouble() / base
+        val fichierPhoto = PhotoStorage.fichierPhoto(context, recette.recette.photoPath)
 
         Column(
             modifier = Modifier
@@ -54,6 +71,17 @@ fun RecetteDetailScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (fichierPhoto != null) {
+                AsyncImage(
+                    model = fichierPhoto,
+                    contentDescription = "Photo du plat",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
+
             Text(
                 "${recette.recette.tempsPreparationMinutes} min",
                 style = MaterialTheme.typography.bodyMedium

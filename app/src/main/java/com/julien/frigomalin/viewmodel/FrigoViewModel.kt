@@ -37,20 +37,17 @@ class FrigoViewModel(
         recetteRepository.getAllAvecIngredients()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val toutesLesRecettes: StateFlow<List<Recette>> = recettes
-        .let { flow ->
-            kotlinx.coroutines.flow.MutableStateFlow(emptyList<Recette>()).also { out ->
-                viewModelScope.launch {
-                    flow.collect { liste -> out.value = liste.map { it.recette } }
-                }
-            }
+    val toutesLesRecettes: StateFlow<List<Recette>> = run {
+        val out = MutableStateFlow<List<Recette>>(emptyList())
+        viewModelScope.launch {
+            recettes.collect { liste -> out.value = liste.map { it.recette } }
         }
+        out
+    }
 
     val suggestions: StateFlow<List<SuggestionRecette>> = combine(stock, recettes) { s, r ->
         RecetteSuggestionEngine.suggerer(s, r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // --- Détail recette + portions ---
 
     private val recetteSelectionneeId = MutableStateFlow<Long?>(null)
     private val portionsSelectionnees = MutableStateFlow(1)
@@ -80,8 +77,6 @@ class FrigoViewModel(
         portionsSelectionnees.value = portions.coerceAtLeast(1)
     }
 
-    // --- Stock ---
-
     fun ajouterIngredient(ingredient: Ingredient) {
         viewModelScope.launch { ingredientRepository.insert(ingredient) }
     }
@@ -94,13 +89,15 @@ class FrigoViewModel(
         viewModelScope.launch { ingredientRepository.delete(ingredient) }
     }
 
-    // --- Recettes ---
-
-    fun ajouterRecette(recette: Recette, ingredients: List<RecetteIngredient>) {
-        viewModelScope.launch { recetteRepository.insertRecetteComplete(recette, ingredients) }
+    fun enregistrerRecette(recette: Recette, ingredients: List<RecetteIngredient>) {
+        viewModelScope.launch {
+            if (recette.id == 0L) {
+                recetteRepository.insertRecetteComplete(recette, ingredients)
+            } else {
+                recetteRepository.updateRecetteComplete(recette, ingredients)
+            }
+        }
     }
-
-    // --- Planning ---
 
     val semaineActuelle: StateFlow<List<PlanningJour>> = run {
         val (debut, fin) = bornesSemaineCourante()

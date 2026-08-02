@@ -2,11 +2,6 @@ package com.julien.frigomalin.data
 
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Logique combinant plusieurs appels DAO. Placée hors du DAO lui-même
- * pour éviter un bug connu de KSP avec les méthodes à corps d'implémentation
- * dans les interfaces annotées @Dao.
- */
 class RecetteRepository(private val recetteDao: RecetteDao) {
 
     fun getAllAvecIngredients(): Flow<List<RecetteAvecIngredients>> =
@@ -16,5 +11,11 @@ class RecetteRepository(private val recetteDao: RecetteDao) {
         val recetteId = recetteDao.insertRecette(recette)
         recetteDao.insertIngredientsRecette(ingredients.map { it.copy(recetteId = recetteId) })
         return recetteId
+    }
+
+    suspend fun updateRecetteComplete(recette: Recette, ingredients: List<RecetteIngredient>) {
+        recetteDao.updateRecette(recette)
+        recetteDao.deleteIngredientsDeRecette(recette.id)
+        recetteDao.insertIngredientsRecette(ingredients.map { it.copy(recetteId = recette.id) })
     }
 }

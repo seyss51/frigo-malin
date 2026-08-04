@@ -12,5 +12,6 @@ data class Recette(
     val tempsPreparationMinutes: Int,
     val portions: Int,
     val estPersonnalisee: Boolean = false,
-    val photoPath: String? = null
+    val photoPath: String? = null,
+    val sourceUrl: String? = null
 )

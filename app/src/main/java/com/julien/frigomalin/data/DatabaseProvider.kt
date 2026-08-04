@@ -19,7 +19,7 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "frigo_malin_database"
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -34,7 +34,6 @@ object DatabaseProvider {
         }
     }
 
-    /** Nécessaire avant d'écraser le fichier de base pour un import/export. */
     fun fermerBaseDeDonnees() {
         synchronized(this) {
             INSTANCE?.close()

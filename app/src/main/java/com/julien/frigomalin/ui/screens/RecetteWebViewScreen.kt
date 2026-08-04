@@ -3,6 +3,7 @@ package com.julien.frigomalin.ui.screens
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -22,13 +23,25 @@ fun RecetteWebViewScreen(
 ) {
     var titrePage by remember { mutableStateOf("") }
     var urlActuelle by remember { mutableStateOf(urlDepart) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    fun retourOuFermer() {
+        val webView = webViewRef
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            onRetour()
+        }
+    }
+
+    BackHandler(onBack = { retourOuFermer() })
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(titrePage.ifBlank { "Recherche de recette" }, maxLines = 1) },
                 navigationIcon = {
-                    IconButton(onClick = onRetour) {
+                    IconButton(onClick = { retourOuFermer() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
                     }
                 },
@@ -59,6 +72,7 @@ fun RecetteWebViewScreen(
                         }
                     }
                     loadUrl(urlDepart)
+                    webViewRef = this
                 }
             }
         )

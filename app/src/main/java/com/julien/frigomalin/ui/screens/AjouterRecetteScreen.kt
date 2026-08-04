@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,17 +40,20 @@ private data class LigneIngredient(
 @Composable
 fun AjouterRecetteScreen(
     recetteExistante: RecetteAvecIngredients? = null,
+    titreInitial: String = "",
+    sourceUrlInitiale: String? = null,
     onRetour: () -> Unit,
     onEnregistrer: (Recette, List<RecetteIngredient>) -> Unit
 ) {
     val context = LocalContext.current
     val estEdition = recetteExistante != null
 
-    var nom by remember { mutableStateOf(recetteExistante?.recette?.nom ?: "") }
+    var nom by remember { mutableStateOf(recetteExistante?.recette?.nom ?: titreInitial) }
     var instructions by remember { mutableStateOf(recetteExistante?.recette?.instructions ?: "") }
     var temps by remember { mutableStateOf(recetteExistante?.recette?.tempsPreparationMinutes?.toString() ?: "") }
     var portions by remember { mutableStateOf(recetteExistante?.recette?.portions?.toString() ?: "4") }
     var photoNomFichier by remember { mutableStateOf(recetteExistante?.recette?.photoPath) }
+    val sourceUrl = recetteExistante?.recette?.sourceUrl ?: sourceUrlInitiale
     var lignesIngredients by remember {
         mutableStateOf(
             recetteExistante?.ingredients?.map {
@@ -112,6 +116,22 @@ fun AjouterRecetteScreen(
                         Icon(Icons.Default.AddAPhoto, contentDescription = null)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("Ajouter une photo du plat")
+                    }
+                }
+            }
+
+            if (sourceUrl != null) {
+                Card {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Link, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Trouvée en ligne — pense à recopier les ingrédients et instructions depuis la page.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -227,7 +247,8 @@ fun AjouterRecetteScreen(
                             tempsPreparationMinutes = tempsValeur,
                             portions = portionsValeur,
                             estPersonnalisee = recetteExistante?.recette?.estPersonnalisee ?: true,
-                            photoPath = photoNomFichier
+                            photoPath = photoNomFichier,
+                            sourceUrl = sourceUrl
                         ),
                         ingredientsValides
                     )

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ fun RecetteDetailScreen(
     listeCourses: List<ArticleCourse>,
     onPortionsChange: (Int) -> Unit,
     onModifier: () -> Unit,
+    onVoirSource: (String) -> Unit,
     onRetour: () -> Unit
 ) {
     val context = LocalContext.current
@@ -86,6 +88,17 @@ fun RecetteDetailScreen(
                 "${recette.recette.tempsPreparationMinutes} min",
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            recette.recette.sourceUrl?.let { url ->
+                OutlinedButton(
+                    onClick = { onVoirSource(url) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Link, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Voir la recette originale")
+                }
+            }
 
             Card {
                 Row(

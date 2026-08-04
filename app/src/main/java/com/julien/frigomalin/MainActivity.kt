@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -29,6 +30,8 @@ import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
 import com.julien.frigomalin.ui.screens.ParametresScreen
 import com.julien.frigomalin.ui.screens.PlanningScreen
 import com.julien.frigomalin.ui.screens.RecetteDetailScreen
+import com.julien.frigomalin.ui.screens.RecetteWebViewScreen
+import com.julien.frigomalin.ui.screens.RechercheEnLigneScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.ui.theme.FrigoMalinTheme
@@ -38,7 +41,8 @@ import kotlinx.coroutines.launch
 private enum class Ecran {
     STOCK, SUGGESTIONS, PLANNING, PARAMETRES,
     AJOUT_INGREDIENT, MODIF_INGREDIENT,
-    AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE
+    AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE,
+    RECHERCHE_EN_LIGNE, WEBVIEW_RECETTE
 }
 
 class MainActivity : ComponentActivity() {
@@ -67,6 +71,9 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
 
     var ecranActif by remember { mutableStateOf(Ecran.STOCK) }
     var ingredientEnEdition by remember { mutableStateOf<Ingredient?>(null) }
+    var urlWebViewActuelle by remember { mutableStateOf("") }
+    var prefillTitreRecette by remember { mutableStateOf("") }
+    var prefillUrlRecette by remember { mutableStateOf<String?>(null) }
 
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
@@ -118,7 +125,13 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         }
         Ecran.AJOUT_RECETTE -> {
             AjouterRecetteScreen(
-                onRetour = { ecranActif = Ecran.SUGGESTIONS },
+                titreInitial = prefillTitreRecette,
+                sourceUrlInitiale = prefillUrlRecette,
+                onRetour = {
+                    prefillTitreRecette = ""
+                    prefillUrlRecette = null
+                    ecranActif = Ecran.SUGGESTIONS
+                },
                 onEnregistrer = { recette, ingredients -> viewModel.enregistrerRecette(recette, ingredients) }
             )
             return
@@ -138,7 +151,33 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
                 listeCourses = listeCourses,
                 onPortionsChange = { viewModel.definirPortions(it) },
                 onModifier = { ecranActif = Ecran.MODIF_RECETTE },
+                onVoirSource = { url ->
+                    urlWebViewActuelle = url
+                    ecranActif = Ecran.WEBVIEW_RECETTE
+                },
                 onRetour = { ecranActif = Ecran.SUGGESTIONS }
+            )
+            return
+        }
+        Ecran.RECHERCHE_EN_LIGNE -> {
+            RechercheEnLigneScreen(
+                stock = stock,
+                onLancerRecherche = { url ->
+                    urlWebViewActuelle = url
+                    ecranActif = Ecran.WEBVIEW_RECETTE
+                }
+            )
+            return
+        }
+        Ecran.WEBVIEW_RECETTE -> {
+            RecetteWebViewScreen(
+                urlDepart = urlWebViewActuelle,
+                onRetour = { ecranActif = Ecran.SUGGESTIONS },
+                onEnregistrerCommeRecette = { titre, url ->
+                    prefillTitreRecette = titre
+                    prefillUrlRecette = url
+                    ecranActif = Ecran.AJOUT_RECETTE
+                }
             )
             return
         }
@@ -165,6 +204,12 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
                     onClick = { ecranActif = Ecran.PLANNING },
                     icon = { Icon(Icons.Default.CalendarMonth, contentDescription = "Planning") },
                     label = { Text("Planning") }
+                )
+                NavigationBarItem(
+                    selected = ecranActif == Ecran.RECHERCHE_EN_LIGNE,
+                    onClick = { ecranActif = Ecran.RECHERCHE_EN_LIGNE },
+                    icon = { Icon(Icons.Default.Public, contentDescription = "En ligne") },
+                    label = { Text("En ligne") }
                 )
                 NavigationBarItem(
                     selected = ecranActif == Ecran.PARAMETRES,

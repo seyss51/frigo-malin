@@ -25,11 +25,14 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.julien.frigomalin.data.BackupManager
 import com.julien.frigomalin.data.Ingredient
+import com.julien.frigomalin.data.TypeRepas
 import com.julien.frigomalin.ui.screens.AjouterIngredientScreen
 import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
+import com.julien.frigomalin.ui.screens.CreneauPickerDialog
 import com.julien.frigomalin.ui.screens.ParametresScreen
 import com.julien.frigomalin.ui.screens.PlanningScreen
 import com.julien.frigomalin.ui.screens.RecetteDetailScreen
+import com.julien.frigomalin.ui.screens.RecettePickerScreen
 import com.julien.frigomalin.ui.screens.RecetteWebViewScreen
 import com.julien.frigomalin.ui.screens.RechercheEnLigneScreen
 import com.julien.frigomalin.ui.screens.StockScreen
@@ -43,12 +46,10 @@ private enum class Ecran {
     STOCK, SUGGESTIONS, PLANNING, RECHERCHE_EN_LIGNE, PARAMETRES,
     AJOUT_INGREDIENT, MODIF_INGREDIENT,
     AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE,
-    WEBVIEW_RECETTE
+    WEBVIEW_RECETTE, CHOIX_RECETTE_PLANNING
 }
 
-private val ECRANS_NAVIGATION_PRINCIPALE = setOf(
-    Ecran.STOCK, Ecran.SUGGESTIONS, Ecran.PLANNING, Ecran.RECHERCHE_EN_LIGNE, Ecran.PARAMETRES
-)
+private data class CreneauCible(val date: Long, val typeRepas: TypeRepas)
 
 class MainActivity : ComponentActivity() {
 
@@ -78,6 +79,8 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     var ingredientEnEdition by remember { mutableStateOf<Ingredient?>(null) }
     var urlWebViewActuelle by remember { mutableStateOf("") }
     var extractionEnAttente by remember { mutableStateOf<RecetteExtraite?>(null) }
+    var creneauCible by remember { mutableStateOf<CreneauCible?>(null) }
+    var dialogAjoutPlanningOuvert by remember { mutableStateOf(false) }
 
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
@@ -111,7 +114,19 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         }
     }
 
-    // Écrans en plein écran (sans barre de navigation du bas) : ajout/modif, détail, navigateur web
+    // Dialogue "Ajouter au planning" depuis le détail d'une recette
+    if (dialogAjoutPlanningOuvert && recetteSelectionnee != null) {
+        CreneauPickerDialog(
+            nomRecette = recetteSelectionnee!!.recette.nom,
+            onDismiss = { dialogAjoutPlanningOuvert = false },
+            onSelectionner = { date, type ->
+                viewModel.assignerRepas(date, type, recetteSelectionnee!!.recette.id)
+                dialogAjoutPlanningOuvert = false
+            }
+        )
+    }
+
+    // Écrans en plein écran (sans barre de navigation du bas)
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
             AjouterIngredientScreen(
@@ -154,6 +169,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
                 listeCourses = listeCourses,
                 onPortionsChange = { viewModel.definirPortions(it) },
                 onModifier = { ecranActif = Ecran.MODIF_RECETTE },
+                onAjouterAuPlanning = { dialogAjoutPlanningOuvert = true },
                 onVoirSource = { url ->
                     urlWebViewActuelle = url
                     ecranActif = Ecran.WEBVIEW_RECETTE
@@ -173,10 +189,26 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             )
             return
         }
+        Ecran.CHOIX_RECETTE_PLANNING -> {
+            val cible = creneauCible
+            RecettePickerScreen(
+                recettes = toutesLesRecettes,
+                titre = "Choisir une recette",
+                onRetour = { ecranActif = Ecran.PLANNING },
+                onChoisir = { recette ->
+                    if (cible != null) {
+                        viewModel.assignerRepas(cible.date, cible.typeRepas, recette.id)
+                    }
+                    creneauCible = null
+                    ecranActif = Ecran.PLANNING
+                }
+            )
+            return
+        }
         else -> Unit
     }
 
-    // Écrans de navigation principale (avec barre du bas) : Stock, Suggestions, Planning, En ligne, Réglages
+    // Écrans de navigation principale (avec barre du bas)
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -245,7 +277,10 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             Ecran.PLANNING -> PlanningScreen(
                 planning = quinzaine,
                 recettes = toutesLesRecettes,
-                onAssigner = { date, type, recetteId -> viewModel.assignerRepas(date, type, recetteId) },
+                onChoisirRecette = { date, type ->
+                    creneauCible = CreneauCible(date, type)
+                    ecranActif = Ecran.CHOIX_RECETTE_PLANNING
+                },
                 onRetirer = { viewModel.retirerRepas(it) },
                 modifier = Modifier.padding(padding)
             )

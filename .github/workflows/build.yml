@@ -30,7 +30,29 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
-        run: ./gradlew clean assembleDebug --stacktrace
+        id: build
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew clean assembleDebug --stacktrace 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Afficher uniquement les erreurs
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "===== ERREURS DE COMPILATION ====="
+          grep -E "error:|^e: |FAILED|What went wrong|Unresolved reference|Expecting" build.log || echo "Aucune ligne d'erreur reconnue par le filtre — voir build.log complet dans les artifacts."
+
+      - name: Sauvegarder le log complet en cas d'échec
+        if: steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+
+      - name: Stopper le job si le build a échoué
+        if: steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Update latest-debug release
         uses: softprops/action-gh-release@v2

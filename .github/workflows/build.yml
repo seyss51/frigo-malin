@@ -41,7 +41,10 @@ jobs:
         if: steps.build.outcome == 'failure'
         run: |
           echo "===== ERREURS DE COMPILATION ====="
-          grep -E "error:|^e: |FAILED|What went wrong|Unresolved reference|Expecting" build.log || echo "Aucune ligne d'erreur reconnue par le filtre — voir build.log complet dans les artifacts."
+          { grep -E "^e: |error:|FAILURE: Build failed" build.log || true; } | sort -u | head -30
+          echo ""
+          echo "===== MESSAGE DE L'EXCEPTION ====="
+          grep -A 5 "What went wrong" build.log | head -15
 
       - name: Sauvegarder le log complet en cas d'échec
         if: steps.build.outcome == 'failure'

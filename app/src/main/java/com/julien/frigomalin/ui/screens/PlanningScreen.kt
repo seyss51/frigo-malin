@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.julien.frigomalin.data.PlanningJour
 import com.julien.frigomalin.data.Recette
@@ -27,44 +28,54 @@ fun PlanningScreen(
 ) {
     var creneauSelectionne by remember { mutableStateOf<CreneauSelection?>(null) }
     val recettesParId = remember(recettes) { recettes.associateBy { it.id } }
-    val joursDeLaSemaine = remember { joursDeLaSemaineCourante() }
+    val quinzaine = remember { joursDeLaQuinzaineCourante() }
     val formatJour = remember { SimpleDateFormat("EEEE d MMM", Locale.FRENCH) }
+    val formatEnTete = remember { SimpleDateFormat("d MMM", Locale.FRENCH) }
+
+    val semaine1 = quinzaine.take(7)
+    val semaine2 = quinzaine.drop(7)
 
     LazyColumn(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        items(joursDeLaSemaine) { dateJour ->
-            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        formatJour.format(dateJour).replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    listOf(TypeRepas.MIDI to "Midi", TypeRepas.SOIR to "Soir").forEach { (type, label) ->
-                        val repasAssigne = planning.firstOrNull { it.date == dateJour && it.typeRepas == type }
-                        val nomRecette = repasAssigne?.let { recettesParId[it.recetteId]?.nom }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("$label : ${nomRecette ?: "—"}", style = MaterialTheme.typography.bodyMedium)
-                            Row {
-                                TextButton(onClick = { creneauSelectionne = CreneauSelection(dateJour, type) }) {
-                                    Text(if (nomRecette == null) "Choisir" else "Changer")
-                                }
-                                if (repasAssigne != null) {
-                                    TextButton(onClick = { onRetirer(repasAssigne) }) {
-                                        Text("Retirer")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        item {
+            Text(
+                "Semaine du ${formatEnTete.format(semaine1.first())}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
         }
+        items(semaine1) { dateJour ->
+            CarteJour(
+                dateJour = dateJour,
+                planning = planning,
+                recettesParId = recettesParId,
+                formatJour = formatJour,
+                onChoisir = { type -> creneauSelectionne = CreneauSelection(dateJour, type) },
+                onRetirer = onRetirer
+            )
+        }
+
+        item {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            Text(
+                "Semaine du ${formatEnTete.format(semaine2.first())}",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+        items(semaine2) { dateJour ->
+            CarteJour(
+                dateJour = dateJour,
+                planning = planning,
+                recettesParId = recettesParId,
+                formatJour = formatJour,
+                onChoisir = { type -> creneauSelectionne = CreneauSelection(dateJour, type) },
+                onRetirer = onRetirer
+            )
+        }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 
     creneauSelectionne?.let { creneau ->
@@ -99,7 +110,48 @@ fun PlanningScreen(
     }
 }
 
-private fun joursDeLaSemaineCourante(): List<Long> {
+@Composable
+private fun CarteJour(
+    dateJour: Long,
+    planning: List<PlanningJour>,
+    recettesParId: Map<Long, Recette>,
+    formatJour: SimpleDateFormat,
+    onChoisir: (TypeRepas) -> Unit,
+    onRetirer: (PlanningJour) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                formatJour.format(dateJour).replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            listOf(TypeRepas.MIDI to "Midi", TypeRepas.SOIR to "Soir").forEach { (type, label) ->
+                val repasAssigne = planning.firstOrNull { it.date == dateJour && it.typeRepas == type }
+                val nomRecette = repasAssigne?.let { recettesParId[it.recetteId]?.nom }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("$label : ${nomRecette ?: "—"}", style = MaterialTheme.typography.bodyMedium)
+                    Row {
+                        TextButton(onClick = { onChoisir(type) }) {
+                            Text(if (nomRecette == null) "Choisir" else "Changer")
+                        }
+                        if (repasAssigne != null) {
+                            TextButton(onClick = { onRetirer(repasAssigne) }) {
+                                Text("Retirer")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun joursDeLaQuinzaineCourante(): List<Long> {
     val cal = Calendar.getInstance()
     cal.firstDayOfWeek = Calendar.MONDAY
     cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
@@ -108,7 +160,7 @@ private fun joursDeLaSemaineCourante(): List<Long> {
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
 
-    return (0 until 7).map {
+    return (0 until 14).map {
         val jour = cal.timeInMillis
         cal.add(Calendar.DAY_OF_YEAR, 1)
         jour

@@ -99,8 +99,10 @@ class FrigoViewModel(
         }
     }
 
-    val semaineActuelle: StateFlow<List<PlanningJour>> = run {
-        val (debut, fin) = bornesSemaineCourante()
+    // --- Planning sur 2 semaines (14 jours) ---
+
+    val quinzaineActuelle: StateFlow<List<PlanningJour>> = run {
+        val (debut, fin) = bornesQuinzaineCourante()
         planningRepository.getSemaine(debut, fin)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
@@ -115,7 +117,7 @@ class FrigoViewModel(
         viewModelScope.launch { planningRepository.delete(planningJour) }
     }
 
-    private fun bornesSemaineCourante(): Pair<Long, Long> {
+    private fun bornesQuinzaineCourante(): Pair<Long, Long> {
         val cal = Calendar.getInstance()
         cal.firstDayOfWeek = Calendar.MONDAY
         cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
@@ -124,7 +126,7 @@ class FrigoViewModel(
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
         val debut = cal.timeInMillis
-        cal.add(Calendar.DAY_OF_YEAR, 7)
+        cal.add(Calendar.DAY_OF_YEAR, 14)
         val fin = cal.timeInMillis - 1
         return debut to fin
     }

@@ -35,6 +35,7 @@ import com.julien.frigomalin.ui.screens.RechercheEnLigneScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.ui.theme.FrigoMalinTheme
+import com.julien.frigomalin.util.RecetteExtraite
 import com.julien.frigomalin.viewmodel.FrigoViewModel
 import kotlinx.coroutines.launch
 
@@ -72,8 +73,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     var ecranActif by remember { mutableStateOf(Ecran.STOCK) }
     var ingredientEnEdition by remember { mutableStateOf<Ingredient?>(null) }
     var urlWebViewActuelle by remember { mutableStateOf("") }
-    var prefillTitreRecette by remember { mutableStateOf("") }
-    var prefillUrlRecette by remember { mutableStateOf<String?>(null) }
+    var extractionEnAttente by remember { mutableStateOf<RecetteExtraite?>(null) }
 
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
@@ -125,11 +125,9 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         }
         Ecran.AJOUT_RECETTE -> {
             AjouterRecetteScreen(
-                titreInitial = prefillTitreRecette,
-                sourceUrlInitiale = prefillUrlRecette,
+                extraction = extractionEnAttente,
                 onRetour = {
-                    prefillTitreRecette = ""
-                    prefillUrlRecette = null
+                    extractionEnAttente = null
                     ecranActif = Ecran.SUGGESTIONS
                 },
                 onEnregistrer = { recette, ingredients -> viewModel.enregistrerRecette(recette, ingredients) }
@@ -173,9 +171,8 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             RecetteWebViewScreen(
                 urlDepart = urlWebViewActuelle,
                 onRetour = { ecranActif = Ecran.SUGGESTIONS },
-                onEnregistrerCommeRecette = { titre, url ->
-                    prefillTitreRecette = titre
-                    prefillUrlRecette = url
+                onEnregistrerCommeRecette = { extraction ->
+                    extractionEnAttente = extraction
                     ecranActif = Ecran.AJOUT_RECETTE
                 }
             )

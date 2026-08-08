@@ -40,11 +40,15 @@ import com.julien.frigomalin.viewmodel.FrigoViewModel
 import kotlinx.coroutines.launch
 
 private enum class Ecran {
-    STOCK, SUGGESTIONS, PLANNING, PARAMETRES,
+    STOCK, SUGGESTIONS, PLANNING, RECHERCHE_EN_LIGNE, PARAMETRES,
     AJOUT_INGREDIENT, MODIF_INGREDIENT,
     AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE,
-    RECHERCHE_EN_LIGNE, WEBVIEW_RECETTE
+    WEBVIEW_RECETTE
 }
+
+private val ECRANS_NAVIGATION_PRINCIPALE = setOf(
+    Ecran.STOCK, Ecran.SUGGESTIONS, Ecran.PLANNING, Ecran.RECHERCHE_EN_LIGNE, Ecran.PARAMETRES
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -81,7 +85,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     val portionsActuelles by viewModel.portionsActuelles.collectAsStateWithLifecycle()
     val listeCourses by viewModel.listeCourses.collectAsStateWithLifecycle()
     val toutesLesRecettes by viewModel.toutesLesRecettes.collectAsStateWithLifecycle()
-    val semaine by viewModel.semaineActuelle.collectAsStateWithLifecycle()
+    val quinzaine by viewModel.quinzaineActuelle.collectAsStateWithLifecycle()
 
     val selecteurImportZip = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -107,6 +111,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         }
     }
 
+    // Écrans en plein écran (sans barre de navigation du bas) : ajout/modif, détail, navigateur web
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
             AjouterIngredientScreen(
@@ -157,20 +162,10 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             )
             return
         }
-        Ecran.RECHERCHE_EN_LIGNE -> {
-            RechercheEnLigneScreen(
-                stock = stock,
-                onLancerRecherche = { url ->
-                    urlWebViewActuelle = url
-                    ecranActif = Ecran.WEBVIEW_RECETTE
-                }
-            )
-            return
-        }
         Ecran.WEBVIEW_RECETTE -> {
             RecetteWebViewScreen(
                 urlDepart = urlWebViewActuelle,
-                onRetour = { ecranActif = Ecran.SUGGESTIONS },
+                onRetour = { ecranActif = Ecran.RECHERCHE_EN_LIGNE },
                 onEnregistrerCommeRecette = { extraction ->
                     extractionEnAttente = extraction
                     ecranActif = Ecran.AJOUT_RECETTE
@@ -181,6 +176,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         else -> Unit
     }
 
+    // Écrans de navigation principale (avec barre du bas) : Stock, Suggestions, Planning, En ligne, Réglages
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -247,10 +243,18 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
                 modifier = Modifier.padding(padding)
             )
             Ecran.PLANNING -> PlanningScreen(
-                planning = semaine,
+                planning = quinzaine,
                 recettes = toutesLesRecettes,
                 onAssigner = { date, type, recetteId -> viewModel.assignerRepas(date, type, recetteId) },
                 onRetirer = { viewModel.retirerRepas(it) },
+                modifier = Modifier.padding(padding)
+            )
+            Ecran.RECHERCHE_EN_LIGNE -> RechercheEnLigneScreen(
+                stock = stock,
+                onLancerRecherche = { url ->
+                    urlWebViewActuelle = url
+                    ecranActif = Ecran.WEBVIEW_RECETTE
+                },
                 modifier = Modifier.padding(padding)
             )
             Ecran.PARAMETRES -> ParametresScreen(

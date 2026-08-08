@@ -1,5 +1,6 @@
 package com.julien.frigomalin.ui.screens
 
+import androidx.compose.ui.unit.dp
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient

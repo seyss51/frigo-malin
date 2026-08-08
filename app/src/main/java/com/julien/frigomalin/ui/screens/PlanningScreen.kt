@@ -1,32 +1,37 @@
 package com.julien.frigomalin.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.julien.frigomalin.data.PlanningJour
 import com.julien.frigomalin.data.Recette
 import com.julien.frigomalin.data.TypeRepas
+import com.julien.frigomalin.util.PhotoStorage
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-private data class CreneauSelection(val date: Long, val typeRepas: TypeRepas)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanningScreen(
     planning: List<PlanningJour>,
     recettes: List<Recette>,
-    onAssigner: (date: Long, typeRepas: TypeRepas, recetteId: Long) -> Unit,
+    onChoisirRecette: (date: Long, typeRepas: TypeRepas) -> Unit,
     onRetirer: (PlanningJour) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var creneauSelectionne by remember { mutableStateOf<CreneauSelection?>(null) }
     val recettesParId = remember(recettes) { recettes.associateBy { it.id } }
     val quinzaine = remember { joursDeLaQuinzaineCourante() }
     val formatJour = remember { SimpleDateFormat("EEEE d MMM", Locale.FRENCH) }
@@ -50,7 +55,7 @@ fun PlanningScreen(
                 planning = planning,
                 recettesParId = recettesParId,
                 formatJour = formatJour,
-                onChoisir = { type -> creneauSelectionne = CreneauSelection(dateJour, type) },
+                onChoisir = { type -> onChoisirRecette(dateJour, type) },
                 onRetirer = onRetirer
             )
         }
@@ -70,43 +75,12 @@ fun PlanningScreen(
                 planning = planning,
                 recettesParId = recettesParId,
                 formatJour = formatJour,
-                onChoisir = { type -> creneauSelectionne = CreneauSelection(dateJour, type) },
+                onChoisir = { type -> onChoisirRecette(dateJour, type) },
                 onRetirer = onRetirer
             )
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
-    }
-
-    creneauSelectionne?.let { creneau ->
-        AlertDialog(
-            onDismissRequest = { creneauSelectionne = null },
-            title = { Text("Choisir une recette") },
-            text = {
-                if (recettes.isEmpty()) {
-                    Text("Aucune recette disponible. Ajoutes-en une d'abord.")
-                } else {
-                    LazyColumn {
-                        items(recettes, key = { it.id }) { recette ->
-                            TextButton(
-                                onClick = {
-                                    onAssigner(creneau.date, creneau.typeRepas, recette.id)
-                                    creneauSelectionne = null
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(recette.nom, modifier = Modifier.fillMaxWidth())
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { creneauSelectionne = null }) {
-                    Text("Fermer")
-                }
-            }
-        )
     }
 }
 
@@ -119,6 +93,8 @@ private fun CarteJour(
     onChoisir: (TypeRepas) -> Unit,
     onRetirer: (PlanningJour) -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -128,16 +104,45 @@ private fun CarteJour(
             Spacer(modifier = Modifier.height(6.dp))
             listOf(TypeRepas.MIDI to "Midi", TypeRepas.SOIR to "Soir").forEach { (type, label) ->
                 val repasAssigne = planning.firstOrNull { it.date == dateJour && it.typeRepas == type }
-                val nomRecette = repasAssigne?.let { recettesParId[it.recetteId]?.nom }
+                val recette = repasAssigne?.let { recettesParId[it.recetteId] }
+                val fichierPhoto = recette?.let { PhotoStorage.fichierPhoto(context, it.photoPath) }
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("$label : ${nomRecette ?: "—"}", style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (recette != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (fichierPhoto != null) {
+                                    AsyncImage(
+                                        model = fichierPhoto,
+                                        contentDescription = recette.nom,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Restaurant,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text("$label : ${recette?.nom ?: "—"}", style = MaterialTheme.typography.bodyMedium)
+                    }
                     Row {
                         TextButton(onClick = { onChoisir(type) }) {
-                            Text(if (nomRecette == null) "Choisir" else "Changer")
+                            Text(if (recette == null) "Choisir" else "Changer")
                         }
                         if (repasAssigne != null) {
                             TextButton(onClick = { onRetirer(repasAssigne) }) {

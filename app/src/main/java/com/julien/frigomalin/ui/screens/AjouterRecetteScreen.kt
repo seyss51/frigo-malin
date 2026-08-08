@@ -29,6 +29,8 @@ import com.julien.frigomalin.data.Recette
 import com.julien.frigomalin.data.RecetteAvecIngredients
 import com.julien.frigomalin.data.RecetteIngredient
 import com.julien.frigomalin.util.PhotoStorage
+import com.julien.frigomalin.util.RecetteExtraite
+import com.julien.frigomalin.util.parserLigneIngredient
 
 private data class LigneIngredient(
     val nom: String = "",
@@ -40,27 +42,32 @@ private data class LigneIngredient(
 @Composable
 fun AjouterRecetteScreen(
     recetteExistante: RecetteAvecIngredients? = null,
-    titreInitial: String = "",
-    sourceUrlInitiale: String? = null,
+    extraction: RecetteExtraite? = null,
     onRetour: () -> Unit,
     onEnregistrer: (Recette, List<RecetteIngredient>) -> Unit
 ) {
     val context = LocalContext.current
     val estEdition = recetteExistante != null
 
-    var nom by remember { mutableStateOf(recetteExistante?.recette?.nom ?: titreInitial) }
-    var instructions by remember { mutableStateOf(recetteExistante?.recette?.instructions ?: "") }
-    var temps by remember { mutableStateOf(recetteExistante?.recette?.tempsPreparationMinutes?.toString() ?: "") }
-    var portions by remember { mutableStateOf(recetteExistante?.recette?.portions?.toString() ?: "4") }
+    var nom by remember { mutableStateOf(recetteExistante?.recette?.nom ?: extraction?.titre ?: "") }
+    var instructions by remember { mutableStateOf(recetteExistante?.recette?.instructions ?: extraction?.instructions ?: "") }
+    var temps by remember { mutableStateOf(recetteExistante?.recette?.tempsPreparationMinutes?.toString() ?: extraction?.tempsMinutes?.toString() ?: "") }
+    var portions by remember { mutableStateOf(recetteExistante?.recette?.portions?.toString() ?: extraction?.portions?.toString() ?: "4") }
     var photoNomFichier by remember { mutableStateOf(recetteExistante?.recette?.photoPath) }
-    val sourceUrl = recetteExistante?.recette?.sourceUrl ?: sourceUrlInitiale
+    val sourceUrl = recetteExistante?.recette?.sourceUrl ?: extraction?.url
     var lignesIngredients by remember {
         mutableStateOf(
             recetteExistante?.ingredients?.map {
                 LigneIngredient(it.nomIngredient, it.quantiteNecessaire.toString(), it.unite)
+            } ?: extraction?.ingredientsBruts?.takeIf { it.isNotEmpty() }?.map { texte ->
+                val parse = parserLigneIngredient(texte)
+                LigneIngredient(parse.nom, parse.quantite, parse.unite)
             } ?: listOf(LigneIngredient())
         )
     }
+
+    val extractionReussie = extraction != null && !extraction.instructions.isNullOrBlank()
+    val extractionPartielle = extraction != null && !extractionReussie
 
     val selecteurPhoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -129,7 +136,11 @@ fun AjouterRecetteScreen(
                         Icon(Icons.Default.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Trouvée en ligne — pense à recopier les ingrédients et instructions depuis la page.",
+                            when {
+                                extractionReussie -> "Récupérée automatiquement — vérifie et ajuste si besoin."
+                                extractionPartielle -> "Récupération partielle — complète les champs manquants."
+                                else -> "Trouvée en ligne — pense à recopier les ingrédients et instructions depuis la page."
+                            },
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

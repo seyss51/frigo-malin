@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Remove
@@ -30,6 +31,7 @@ fun RecetteDetailScreen(
     listeCourses: List<ArticleCourse>,
     onPortionsChange: (Int) -> Unit,
     onModifier: () -> Unit,
+    onAjouterAuPlanning: () -> Unit,
     onVoirSource: (String) -> Unit,
     onRetour: () -> Unit
 ) {
@@ -88,6 +90,15 @@ fun RecetteDetailScreen(
                 "${recette.recette.tempsPreparationMinutes} min",
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            Button(
+                onClick = onAjouterAuPlanning,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ajouter au planning")
+            }
 
             recette.recette.sourceUrl?.let { url ->
                 OutlinedButton(

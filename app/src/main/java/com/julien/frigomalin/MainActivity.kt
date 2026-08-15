@@ -8,8 +8,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -21,6 +26,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.julien.frigomalin.data.BackupManager
@@ -29,6 +35,7 @@ import com.julien.frigomalin.data.TypeRepas
 import com.julien.frigomalin.ui.screens.AjouterIngredientScreen
 import com.julien.frigomalin.ui.screens.AjouterRecetteScreen
 import com.julien.frigomalin.ui.screens.CreneauPickerDialog
+import com.julien.frigomalin.ui.screens.LoginScreen
 import com.julien.frigomalin.ui.screens.ParametresScreen
 import com.julien.frigomalin.ui.screens.PlanningScreen
 import com.julien.frigomalin.ui.screens.RecetteDetailScreen
@@ -38,15 +45,10 @@ import com.julien.frigomalin.ui.screens.RechercheEnLigneScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.ui.theme.FrigoMalinTheme
+import com.julien.frigomalin.util.CrashHandler
 import com.julien.frigomalin.util.RecetteExtraite
 import com.julien.frigomalin.viewmodel.FrigoViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.ui.unit.dp
-
 
 private enum class Ecran {
     STOCK, SUGGESTIONS, PLANNING, RECHERCHE_EN_LIGNE, PARAMETRES,
@@ -66,25 +68,29 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val crashPrecedent = CrashHandler.lireDernierCrash(this)
+        CrashHandler.effacerDernierCrash(this)
+
         setContent {
             FrigoMalinTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var erreurFatale by remember { mutableStateOf<String?>(null) }
-
-                    if (erreurFatale != null) {
-                        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                            Text("Erreur au démarrage", style = MaterialTheme.typography.titleLarge)
+                    if (crashPrecedent != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text("L'app a planté au dernier lancement :", style = MaterialTheme.typography.titleLarge)
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(erreurFatale ?: "")
-                        }
-                    } else {
-                        Box {
-                            runCatching {
-                                FrigoMalinApp(viewModel, onRedemarrer = { recreate() })
-                            }.onFailure { e ->
-                                erreurFatale = "${e::class.simpleName}: ${e.message}"
+                            Text(crashPrecedent, style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { recreate() }) {
+                                Text("Continuer quand même")
                             }
                         }
+                    } else {
+                        FrigoMalinApp(viewModel, onRedemarrer = { recreate() })
                     }
                 }
             }
@@ -104,6 +110,9 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     var creneauCible by remember { mutableStateOf<CreneauCible?>(null) }
     var dialogAjoutPlanningOuvert by remember { mutableStateOf(false) }
 
+    val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
+    var erreurConnexion by remember { mutableStateOf<String?>(null) }
+
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val recetteSelectionnee by viewModel.recetteSelectionnee.collectAsStateWithLifecycle()
@@ -111,11 +120,9 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     val listeCourses by viewModel.listeCourses.collectAsStateWithLifecycle()
     val toutesLesRecettes by viewModel.toutesLesRecettes.collectAsStateWithLifecycle()
     val quinzaine by viewModel.quinzaineActuelle.collectAsStateWithLifecycle()
-val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
-    var erreurConnexion by remember { mutableStateOf<String?>(null) }
 
     if (!estConnecte) {
-        com.julien.frigomalin.ui.screens.LoginScreen(
+        LoginScreen(
             onConnexion = { email, motDePasse ->
                 erreurConnexion = null
                 viewModel.seConnecter(email, motDePasse) { erreurConnexion = it }
@@ -124,6 +131,7 @@ val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
         )
         return
     }
+
     val selecteurImportZip = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -148,7 +156,6 @@ val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
         }
     }
 
-    // Dialogue "Ajouter au planning" depuis le détail d'une recette
     if (dialogAjoutPlanningOuvert && recetteSelectionnee != null) {
         CreneauPickerDialog(
             nomRecette = recetteSelectionnee!!.recette.nom,
@@ -160,7 +167,6 @@ val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
         )
     }
 
-    // Écrans en plein écran (sans barre de navigation du bas)
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
             AjouterIngredientScreen(
@@ -242,7 +248,6 @@ val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
         else -> Unit
     }
 
-    // Écrans de navigation principale (avec barre du bas)
     Scaffold(
         bottomBar = {
             NavigationBar {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464828507380",
+    "project_id": "frigo-malin-8ccd4",
+    "storage_bucket": "frigo-malin-8ccd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464828507380:android:fb28a932edc3cbd3426aa1",
+        "android_client_info": {
+          "package_name": "com.julien.frigomalin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAo-skHZEH1MQMERVqdlC_1e1vP9OLi-MU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

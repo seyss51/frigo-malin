@@ -40,11 +40,18 @@ jobs:
       - name: Afficher uniquement les erreurs
         if: steps.build.outcome == 'failure'
         run: |
-          echo "===== ERREURS DE COMPILATION ====="
-          { grep -E "^e: |error:|FAILURE: Build failed" build.log || true; } | sort -u | head -30
-          echo ""
-          echo "===== MESSAGE DE L'EXCEPTION ====="
-          grep -A 5 "What went wrong" build.log | head -15
+          echo "===== ERREURS ====="
+          { grep -E "^e: |error:|FAILURE: Build failed" build.log || true; } \
+            | sed -E 's#file:///[^ ]*/frigo-malin/##' \
+            | cut -c1-120 \
+            | sort -u \
+            | head -15
+
+      - name: Afficher le message d'exception
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "===== MESSAGE ====="
+          grep -A 3 "What went wrong" build.log | cut -c1-120 | head -8
 
       - name: Sauvegarder le log complet en cas d'échec
         if: steps.build.outcome == 'failure'

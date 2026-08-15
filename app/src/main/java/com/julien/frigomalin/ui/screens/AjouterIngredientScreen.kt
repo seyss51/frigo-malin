@@ -19,19 +19,22 @@ private const val MILLIS_PAR_JOUR = 24 * 60 * 60 * 1000L
 @Composable
 fun AjouterIngredientScreen(
     ingredientExistant: Ingredient? = null,
+    prefillNom: String = "",
+    prefillQuantite: String = "",
+    prefillUnite: String = "g",
     onRetour: () -> Unit,
     onEnregistrer: (Ingredient) -> Unit
 ) {
-    var nom by remember { mutableStateOf(ingredientExistant?.nom ?: "") }
-    var quantite by remember { mutableStateOf(ingredientExistant?.quantite?.toString() ?: "") }
-    var unite by remember { mutableStateOf(ingredientExistant?.unite ?: "g") }
+    var nom by remember { mutableStateOf(ingredientExistant?.nom ?: prefillNom) }
+    var quantite by remember { mutableStateOf(ingredientExistant?.quantite?.toString() ?: prefillQuantite) }
+    var unite by remember { mutableStateOf(ingredientExistant?.unite ?: prefillUnite) }
     val joursInitiaux = ingredientExistant?.datePeremption?.let {
         ((it - System.currentTimeMillis()) / MILLIS_PAR_JOUR).toInt().coerceAtLeast(0).toString()
     } ?: ""
     var joursAvantPeremption by remember { mutableStateOf(joursInitiaux) }
     var uniteMenuOuvert by remember { mutableStateOf(false) }
 
-    val unitesDisponibles = listOf("g", "kg", "ml", "L", "unité")
+    val unitesDisponibles = listOf("g", "kg", "ml", "L", "cl", "unité")
     val estEdition = ingredientExistant != null
 
     Scaffold(

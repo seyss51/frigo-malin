@@ -63,7 +63,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             FrigoMalinTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    FrigoMalinApp(viewModel, onRedemarrer = { recreate() })
+                    var erreurFatale by remember { mutableStateOf<String?>(null) }
+
+                    if (erreurFatale != null) {
+                        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                            Text("Erreur au démarrage", style = MaterialTheme.typography.titleLarge)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(erreurFatale ?: "")
+                        }
+                    } else {
+                        Box {
+                            runCatching {
+                                FrigoMalinApp(viewModel, onRedemarrer = { recreate() })
+                            }.onFailure { e ->
+                                erreurFatale = "${e::class.simpleName}: ${e.message}"
+                            }
+                        }
+                    }
                 }
             }
         }

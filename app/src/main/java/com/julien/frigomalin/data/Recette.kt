@@ -1,17 +1,24 @@
 package com.julien.frigomalin.data
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
-@Entity(tableName = "recettes")
 data class Recette(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val nom: String,
-    val instructions: String,
-    val tempsPreparationMinutes: Int,
-    val portions: Int,
+    val id: String = "",
+    val nom: String = "",
+    val instructions: String = "",
+    val tempsPreparationMinutes: Int = 0,
+    val portions: Int = 4,
     val estPersonnalisee: Boolean = false,
     val photoPath: String? = null,
     val sourceUrl: String? = null
+)
+
+data class RecetteIngredient(
+    val recetteId: String = "",
+    val nomIngredient: String = "",
+    val quantiteNecessaire: Double = 0.0,
+    val unite: String = ""
+)
+
+data class RecetteAvecIngredients(
+    val recette: Recette,
+    val ingredients: List<RecetteIngredient>
 )

@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: FrigoViewModel by viewModels {
         val app = application as FrigoMalinApplication
-        FrigoViewModel.Factory(app.ingredientRepository, app.recetteRepository, app.planningRepository)
+        FrigoViewModel.Factory(app.authRepository, app.ingredientRepository, app.recetteRepository, app.planningRepository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +89,19 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     val listeCourses by viewModel.listeCourses.collectAsStateWithLifecycle()
     val toutesLesRecettes by viewModel.toutesLesRecettes.collectAsStateWithLifecycle()
     val quinzaine by viewModel.quinzaineActuelle.collectAsStateWithLifecycle()
+val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
+    var erreurConnexion by remember { mutableStateOf<String?>(null) }
 
+    if (!estConnecte) {
+        com.julien.frigomalin.ui.screens.LoginScreen(
+            onConnexion = { email, motDePasse ->
+                erreurConnexion = null
+                viewModel.seConnecter(email, motDePasse) { erreurConnexion = it }
+            },
+            messageErreur = erreurConnexion
+        )
+        return
+    }
     val selecteurImportZip = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->

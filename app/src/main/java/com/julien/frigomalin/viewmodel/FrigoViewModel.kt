@@ -3,6 +3,8 @@ package com.julien.frigomalin.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
+import com.julien.frigomalin.data.AuthRepository
 import com.julien.frigomalin.data.Ingredient
 import com.julien.frigomalin.data.IngredientRepository
 import com.julien.frigomalin.data.PlanningJour
@@ -12,6 +14,7 @@ import com.julien.frigomalin.data.RecetteAvecIngredients
 import com.julien.frigomalin.data.RecetteIngredient
 import com.julien.frigomalin.data.RecetteRepository
 import com.julien.frigomalin.data.TypeRepas
+import com.julien.frigomalin.data.peuplerRecettesSiVide
 import com.julien.frigomalin.suggestion.ArticleCourse
 import com.julien.frigomalin.suggestion.RecetteSuggestionEngine
 import com.julien.frigomalin.suggestion.ShoppingListGenerator
@@ -25,10 +28,31 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class FrigoViewModel(
+    val authRepository: AuthRepository,
     private val ingredientRepository: IngredientRepository,
     private val recetteRepository: RecetteRepository,
     private val planningRepository: PlanningRepository
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            peuplerRecettesSiVide(FirebaseFirestore.getInstance())
+        }
+    }
+
+    val estConnecte: StateFlow<Boolean> = authRepository.utilisateurConnecte()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun seConnecter(email: String, motDePasse: String, onErreur: (String) -> Unit) {
+        viewModelScope.launch {
+            authRepository.seConnecter(email, motDePasse)
+                .onFailure { onErreur(it.message ?: "Connexion impossible") }
+        }
+    }
+
+    fun seDeconnecter() {
+        authRepository.seDeconnecter()
+    }
 
     val stock: StateFlow<List<Ingredient>> = ingredientRepository.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -49,7 +73,7 @@ class FrigoViewModel(
         RecetteSuggestionEngine.suggerer(s, r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val recetteSelectionneeId = MutableStateFlow<Long?>(null)
+    private val recetteSelectionneeId = MutableStateFlow<String?>(null)
     private val portionsSelectionnees = MutableStateFlow(1)
 
     val recetteSelectionnee: StateFlow<RecetteAvecIngredients?> =
@@ -68,7 +92,7 @@ class FrigoViewModel(
             } ?: emptyList()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun selectionnerRecette(id: Long, portionsParDefaut: Int) {
+    fun selectionnerRecette(id: String, portionsParDefaut: Int) {
         recetteSelectionneeId.value = id
         portionsSelectionnees.value = portionsParDefaut.coerceAtLeast(1)
     }
@@ -91,7 +115,7 @@ class FrigoViewModel(
 
     fun enregistrerRecette(recette: Recette, ingredients: List<RecetteIngredient>) {
         viewModelScope.launch {
-            if (recette.id == 0L) {
+            if (recette.id.isBlank()) {
                 recetteRepository.insertRecetteComplete(recette, ingredients)
             } else {
                 recetteRepository.updateRecetteComplete(recette, ingredients)
@@ -99,15 +123,13 @@ class FrigoViewModel(
         }
     }
 
-    // --- Planning sur 2 semaines (14 jours) ---
-
     val quinzaineActuelle: StateFlow<List<PlanningJour>> = run {
         val (debut, fin) = bornesQuinzaineCourante()
         planningRepository.getSemaine(debut, fin)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     }
 
-    fun assignerRepas(date: Long, typeRepas: TypeRepas, recetteId: Long) {
+    fun assignerRepas(date: Long, typeRepas: TypeRepas, recetteId: String) {
         viewModelScope.launch {
             planningRepository.insert(PlanningJour(date = date, typeRepas = typeRepas, recetteId = recetteId))
         }
@@ -132,13 +154,14 @@ class FrigoViewModel(
     }
 
     class Factory(
+        private val authRepository: AuthRepository,
         private val ingredientRepository: IngredientRepository,
         private val recetteRepository: RecetteRepository,
         private val planningRepository: PlanningRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
-            return FrigoViewModel(ingredientRepository, recetteRepository, planningRepository) as T
+            return FrigoViewModel(authRepository, ingredientRepository, recetteRepository, planningRepository) as T
         }
     }
 }

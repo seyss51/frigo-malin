@@ -242,7 +242,7 @@ fun AjouterRecetteScreen(
                         val quantiteValeur = ligne.quantite.toDoubleOrNull()
                         if (ligne.nom.isNotBlank() && quantiteValeur != null) {
                             RecetteIngredient(
-                                recetteId = recetteExistante?.recette?.id ?: 0,
+                                recetteId = recetteExistante?.recette?.id ?: "",
                                 nomIngredient = ligne.nom.trim(),
                                 quantiteNecessaire = quantiteValeur,
                                 unite = ligne.unite
@@ -252,7 +252,7 @@ fun AjouterRecetteScreen(
 
                     onEnregistrer(
                         Recette(
-                            id = recetteExistante?.recette?.id ?: 0,
+                            id = recetteExistante?.recette?.id ?: "",
                             nom = nom.trim(),
                             instructions = instructions.trim(),
                             tempsPreparationMinutes = tempsValeur,

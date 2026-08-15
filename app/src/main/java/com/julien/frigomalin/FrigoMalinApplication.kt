@@ -8,8 +8,14 @@ import com.julien.frigomalin.data.AuthRepository
 import com.julien.frigomalin.data.IngredientRepository
 import com.julien.frigomalin.data.PlanningRepository
 import com.julien.frigomalin.data.RecetteRepository
+import com.julien.frigomalin.util.CrashHandler
 
 class FrigoMalinApplication : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        CrashHandler.installer(this)
+    }
 
     val authRepository: AuthRepository by lazy { AuthRepository(Firebase.auth) }
     val ingredientRepository: IngredientRepository by lazy { IngredientRepository(Firebase.firestore) }

@@ -88,7 +88,7 @@ fun PlanningScreen(
 private fun CarteJour(
     dateJour: Long,
     planning: List<PlanningJour>,
-    recettesParId: Map<Long, Recette>,
+    recettesParId: Map<string, Recette>,
     formatJour: SimpleDateFormat,
     onChoisir: (TypeRepas) -> Unit,
     onRetirer: (PlanningJour) -> Unit

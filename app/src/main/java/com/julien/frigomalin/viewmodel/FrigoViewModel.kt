@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -34,14 +36,18 @@ class FrigoViewModel(
     private val planningRepository: PlanningRepository
 ) : ViewModel() {
 
-    init {
-        viewModelScope.launch {
-            peuplerRecettesSiVide(FirebaseFirestore.getInstance())
-        }
-    }
-
     val estConnecte: StateFlow<Boolean> = authRepository.utilisateurConnecte()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    init {
+        viewModelScope.launch {
+            estConnecte.collect { connecte ->
+                if (connecte) {
+                    runCatching { peuplerRecettesSiVide(FirebaseFirestore.getInstance()) }
+                }
+            }
+        }
+    }
 
     fun seConnecter(email: String, motDePasse: String, onErreur: (String) -> Unit) {
         viewModelScope.launch {
@@ -54,12 +60,16 @@ class FrigoViewModel(
         authRepository.seDeconnecter()
     }
 
-    val stock: StateFlow<List<Ingredient>> = ingredientRepository.getAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Toutes les collections ci-dessous n'écoutent Firestore QUE si l'utilisateur est connecté,
+    // pour éviter les erreurs PERMISSION_DENIED (les règles Firestore exigent une session active).
 
-    private val recettes: StateFlow<List<RecetteAvecIngredients>> =
-        recetteRepository.getAllAvecIngredients()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val stock: StateFlow<List<Ingredient>> = estConnecte.flatMapLatest { connecte ->
+        if (connecte) ingredientRepository.getAll() else flowOf(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val recettes: StateFlow<List<RecetteAvecIngredients>> = estConnecte.flatMapLatest { connecte ->
+        if (connecte) recetteRepository.getAllAvecIngredients() else flowOf(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val toutesLesRecettes: StateFlow<List<Recette>> = run {
         val out = MutableStateFlow<List<Recette>>(emptyList())
@@ -123,11 +133,14 @@ class FrigoViewModel(
         }
     }
 
-    val quinzaineActuelle: StateFlow<List<PlanningJour>> = run {
-        val (debut, fin) = bornesQuinzaineCourante()
-        planningRepository.getSemaine(debut, fin)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    }
+    val quinzaineActuelle: StateFlow<List<PlanningJour>> = estConnecte.flatMapLatest { connecte ->
+        if (connecte) {
+            val (debut, fin) = bornesQuinzaineCourante()
+            planningRepository.getSemaine(debut, fin)
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun assignerRepas(date: Long, typeRepas: TypeRepas, recetteId: String) {
         viewModelScope.launch {

@@ -41,6 +41,12 @@ import com.julien.frigomalin.ui.theme.FrigoMalinTheme
 import com.julien.frigomalin.util.RecetteExtraite
 import com.julien.frigomalin.viewmodel.FrigoViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
+
 
 private enum class Ecran {
     STOCK, SUGGESTIONS, PLANNING, RECHERCHE_EN_LIGNE, PARAMETRES,

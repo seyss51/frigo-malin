@@ -32,7 +32,7 @@ fun PlanningScreen(
     onRetirer: (PlanningJour) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val recettesParId = remember(recettes) { recettes.associateBy { it.id } }
+    val recettesParId: Map<String, Recette> = remember(recettes) { recettes.associateBy { it.id } }
     val quinzaine = remember { joursDeLaQuinzaineCourante() }
     val formatJour = remember { SimpleDateFormat("EEEE d MMM", Locale.FRENCH) }
     val formatEnTete = remember { SimpleDateFormat("d MMM", Locale.FRENCH) }
@@ -88,7 +88,7 @@ fun PlanningScreen(
 private fun CarteJour(
     dateJour: Long,
     planning: List<PlanningJour>,
-    recettesParId: Map<string, Recette>,
+    recettesParId: Map<String, Recette>,
     formatJour: SimpleDateFormat,
     onChoisir: (TypeRepas) -> Unit,
     onRetirer: (PlanningJour) -> Unit

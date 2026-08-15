@@ -117,7 +117,7 @@ fun AjouterIngredientScreen(
 
                     onEnregistrer(
                         Ingredient(
-                            id = ingredientExistant?.id ?: 0,
+                            id = ingredientExistant?.id ?: "",
                             nom = nom.trim(),
                             quantite = quantiteValeur,
                             unite = unite,

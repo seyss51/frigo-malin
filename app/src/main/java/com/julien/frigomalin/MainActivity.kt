@@ -1,6 +1,7 @@
 package com.julien.frigomalin
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,15 +19,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.julien.frigomalin.data.BackupManager
@@ -42,6 +46,7 @@ import com.julien.frigomalin.ui.screens.RecetteDetailScreen
 import com.julien.frigomalin.ui.screens.RecettePickerScreen
 import com.julien.frigomalin.ui.screens.RecetteWebViewScreen
 import com.julien.frigomalin.ui.screens.RechercheEnLigneScreen
+import com.julien.frigomalin.ui.screens.ScannerScreen
 import com.julien.frigomalin.ui.screens.StockScreen
 import com.julien.frigomalin.ui.screens.SuggestionsScreen
 import com.julien.frigomalin.ui.theme.FrigoMalinTheme
@@ -54,7 +59,7 @@ private enum class Ecran {
     STOCK, SUGGESTIONS, PLANNING, RECHERCHE_EN_LIGNE, PARAMETRES,
     AJOUT_INGREDIENT, MODIF_INGREDIENT,
     AJOUT_RECETTE, MODIF_RECETTE, DETAIL_RECETTE,
-    WEBVIEW_RECETTE, CHOIX_RECETTE_PLANNING
+    WEBVIEW_RECETTE, CHOIX_RECETTE_PLANNING, SCANNER
 }
 
 private data class CreneauCible(val date: Long, val typeRepas: TypeRepas)
@@ -110,6 +115,10 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     var creneauCible by remember { mutableStateOf<CreneauCible?>(null) }
     var dialogAjoutPlanningOuvert by remember { mutableStateOf(false) }
 
+    var prefillIngredientNom by remember { mutableStateOf("") }
+    var prefillIngredientQuantite by remember { mutableStateOf("") }
+    var prefillIngredientUnite by remember { mutableStateOf("g") }
+
     val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
     var erreurConnexion by remember { mutableStateOf<String?>(null) }
 
@@ -130,6 +139,24 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             messageErreur = erreurConnexion
         )
         return
+    }
+
+    val permissionCamera = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { accorde ->
+        if (accorde) ecranActif = Ecran.SCANNER
+    }
+
+    fun lancerScanner() {
+        val dejaAccorde = ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (dejaAccorde) {
+            ecranActif = Ecran.SCANNER
+        } else {
+            permissionCamera.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     val selecteurImportZip = rememberLauncherForActivityResult(
@@ -170,7 +197,15 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
     when (ecranActif) {
         Ecran.AJOUT_INGREDIENT -> {
             AjouterIngredientScreen(
-                onRetour = { ecranActif = Ecran.STOCK },
+                prefillNom = prefillIngredientNom,
+                prefillQuantite = prefillIngredientQuantite,
+                prefillUnite = prefillIngredientUnite,
+                onRetour = {
+                    prefillIngredientNom = ""
+                    prefillIngredientQuantite = ""
+                    prefillIngredientUnite = "g"
+                    ecranActif = Ecran.STOCK
+                },
                 onEnregistrer = { viewModel.ajouterIngredient(it) }
             )
             return
@@ -245,6 +280,18 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             )
             return
         }
+        Ecran.SCANNER -> {
+            ScannerScreen(
+                onRetour = { ecranActif = Ecran.STOCK },
+                onResultat = { nom, quantite, unite ->
+                    prefillIngredientNom = nom
+                    prefillIngredientQuantite = quantite
+                    prefillIngredientUnite = unite
+                    ecranActif = Ecran.AJOUT_INGREDIENT
+                }
+            )
+            return
+        }
         else -> Unit
     }
 
@@ -284,13 +331,28 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
             }
         },
         floatingActionButton = {
-            if (ecranActif == Ecran.STOCK || ecranActif == Ecran.SUGGESTIONS) {
-                FloatingActionButton(
-                    onClick = {
-                        ecranActif = if (ecranActif == Ecran.STOCK) Ecran.AJOUT_INGREDIENT else Ecran.AJOUT_RECETTE
+            Column(horizontalAlignment = Alignment.End) {
+                if (ecranActif == Ecran.STOCK) {
+                    SmallFloatingActionButton(onClick = { lancerScanner() }) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = "Scanner un produit")
                     }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Ajouter")
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                if (ecranActif == Ecran.STOCK || ecranActif == Ecran.SUGGESTIONS) {
+                    FloatingActionButton(
+                        onClick = {
+                            if (ecranActif == Ecran.STOCK) {
+                                prefillIngredientNom = ""
+                                prefillIngredientQuantite = ""
+                                prefillIngredientUnite = "g"
+                                ecranActif = Ecran.AJOUT_INGREDIENT
+                            } else {
+                                ecranActif = Ecran.AJOUT_RECETTE
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Ajouter")
+                    }
                 }
             }
         }

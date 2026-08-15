@@ -14,7 +14,7 @@ import com.julien.frigomalin.suggestion.SuggestionRecette
 @Composable
 fun SuggestionsScreen(
     suggestions: List<SuggestionRecette>,
-    onSelectionner: (id: Long, portionsParDefaut: Int) -> Unit,
+    onSelectionner: (id: String, portionsParDefaut: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (suggestions.isEmpty()) {

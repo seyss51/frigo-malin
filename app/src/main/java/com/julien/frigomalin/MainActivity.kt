@@ -121,6 +121,7 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
 
     val estConnecte by viewModel.estConnecte.collectAsStateWithLifecycle()
     var erreurConnexion by remember { mutableStateOf<String?>(null) }
+    var infoConnexion by remember { mutableStateOf<String?>(null) }
 
     val stock by viewModel.stock.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
@@ -134,9 +135,16 @@ fun FrigoMalinApp(viewModel: FrigoViewModel, onRedemarrer: () -> Unit) {
         LoginScreen(
             onConnexion = { email, motDePasse ->
                 erreurConnexion = null
+                infoConnexion = null
                 viewModel.seConnecter(email, motDePasse) { erreurConnexion = it }
             },
-            messageErreur = erreurConnexion
+            onMotDePasseOublie = { email ->
+                erreurConnexion = null
+                infoConnexion = null
+                viewModel.reinitialiserMotDePasse(email) { _, message -> infoConnexion = message }
+            },
+            messageErreur = erreurConnexion,
+            messageInfo = infoConnexion
         )
         return
     }

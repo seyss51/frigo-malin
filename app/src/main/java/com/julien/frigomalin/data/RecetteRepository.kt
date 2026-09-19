@@ -8,7 +8,7 @@ import kotlinx.coroutines.tasks.await
 
 private data class RecetteDocument(
     val nom: String = "",
-    val instructions: String = "",
+    val instructions: List<String> = emptyList(),
     val tempsPreparationMinutes: Int = 0,
     val portions: Int = 4,
     val estPersonnalisee: Boolean = false,
@@ -62,7 +62,7 @@ class RecetteRepository(private val db: FirebaseFirestore) {
         val recette = Recette(
             id = id,
             nom = data["nom"] as? String ?: "",
-            instructions = data["instructions"] as? String ?: "",
+            instructions = parserInstructions(data["instructions"]),
             tempsPreparationMinutes = (data["tempsPreparationMinutes"] as? Long)?.toInt() ?: 0,
             portions = (data["portions"] as? Long)?.toInt() ?: 4,
             estPersonnalisee = data["estPersonnalisee"] as? Boolean ?: false,
@@ -80,5 +80,16 @@ class RecetteRepository(private val db: FirebaseFirestore) {
             )
         }
         return RecetteAvecIngredients(recette, ingredients)
+    }
+
+    /** Accepte le nouveau format (liste d'étapes) et l'ancien (texte unique) pour les recettes existantes. */
+    private fun parserInstructions(brut: Any?): List<String> {
+        return when (brut) {
+            is List<*> -> brut.mapNotNull { it as? String }.filter { it.isNotBlank() }
+            is String -> brut.split(Regex("""\r?\n+"""))
+                .map { it.trim().replace(Regex("""^\d+[.)]\s*"""), "") }
+                .filter { it.isNotBlank() }
+            else -> emptyList()
+        }
     }
 }

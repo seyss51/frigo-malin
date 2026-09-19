@@ -7,7 +7,7 @@ import org.json.JSONTokener
 data class RecetteExtraite(
     val titre: String,
     val url: String,
-    val instructions: String? = null,
+    val instructions: List<String> = emptyList(),
     val ingredientsBruts: List<String> = emptyList(),
     val tempsMinutes: Int? = null,
     val portions: Int? = null
@@ -87,8 +87,8 @@ fun extraireRecetteDepuisJson(resultatBrut: String?, titrePage: String, url: Str
     }
 }
 
-private fun extraireInstructions(champ: Any?): String? {
-    val texte = StringBuilder()
+private fun extraireInstructions(champ: Any?): List<String> {
+    val etapes = mutableListOf<String>()
     when (champ) {
         is JSONArray -> {
             for (i in 0 until champ.length()) {
@@ -97,13 +97,18 @@ private fun extraireInstructions(champ: Any?): String? {
                     is JSONObject -> element.optString("text").ifBlank { element.optString("name") }
                     else -> element.toString()
                 }
-                if (ligne.isNotBlank()) texte.appendLine("${i + 1}. ${ligne.trim()}")
+                if (ligne.isNotBlank()) etapes.add(ligne.trim())
             }
         }
-        is String -> texte.append(champ)
-        else -> return null
+        is String -> {
+            champ.split(Regex("""\r?\n+"""))
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .forEach { etapes.add(it) }
+        }
+        else -> {}
     }
-    return texte.toString().trim().ifBlank { null }
+    return etapes
 }
 
 private fun extrairePortions(champ: Any?): Int? {

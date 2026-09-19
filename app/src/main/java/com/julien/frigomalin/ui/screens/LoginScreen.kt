@@ -13,7 +13,9 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LoginScreen(
     onConnexion: (email: String, motDePasse: String) -> Unit,
-    messageErreur: String?
+    onMotDePasseOublie: (email: String) -> Unit,
+    messageErreur: String?,
+    messageInfo: String? = null
 ) {
     var email by remember { mutableStateOf("") }
     var motDePasse by remember { mutableStateOf("") }
@@ -47,6 +49,10 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(messageErreur, color = MaterialTheme.colorScheme.error)
         }
+        if (messageInfo != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(messageInfo, color = MaterialTheme.colorScheme.primary)
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Button(
@@ -54,6 +60,13 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Se connecter")
+        }
+
+        TextButton(
+            onClick = { onMotDePasseOublie(email.trim()) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Mot de passe oublié ?")
         }
     }
 }

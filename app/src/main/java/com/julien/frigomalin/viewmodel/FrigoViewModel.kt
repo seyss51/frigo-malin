@@ -60,6 +60,18 @@ class FrigoViewModel(
         authRepository.seDeconnecter()
     }
 
+    fun reinitialiserMotDePasse(email: String, onResultat: (succes: Boolean, message: String) -> Unit) {
+        if (email.isBlank()) {
+            onResultat(false, "Renseigne ton email d'abord")
+            return
+        }
+        viewModelScope.launch {
+            authRepository.reinitialiserMotDePasse(email)
+                .onSuccess { onResultat(true, "Email de réinitialisation envoyé à $email") }
+                .onFailure { onResultat(false, it.message ?: "Envoi impossible") }
+        }
+    }
+
     // Toutes les collections ci-dessous n'écoutent Firestore QUE si l'utilisateur est connecté,
     // pour éviter les erreurs PERMISSION_DENIED (les règles Firestore exigent une session active).
 

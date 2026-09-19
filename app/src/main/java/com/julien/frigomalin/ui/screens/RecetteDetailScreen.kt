@@ -137,11 +137,23 @@ fun RecetteDetailScreen(
             Text("Ingrédients", style = MaterialTheme.typography.titleMedium)
             recette.ingredients.forEach { ing ->
                 val quantiteAjustee = arrondir(ing.quantiteNecessaire * facteur)
-                Text("• $quantiteAjustee ${ing.unite} ${ing.nomIngredient}")
+                Text("• ${formatQuantiteUnite(quantiteAjustee, ing.unite)} ${ing.nomIngredient}")
             }
 
             Text("Instructions", style = MaterialTheme.typography.titleMedium)
-            Text(recette.recette.instructions)
+            recette.recette.instructions.forEachIndexed { index, etape ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "${index + 1}.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(etape, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                }
+            }
 
             if (listeCourses.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -149,7 +161,7 @@ fun RecetteDetailScreen(
                 listeCourses.forEach { article ->
                     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Text(
-                            "${article.nom} — ${arrondir(article.quantiteManquante)} ${article.unite}",
+                            "${article.nom} — ${formatQuantiteUnite(arrondir(article.quantiteManquante), article.unite)}",
                             modifier = Modifier.padding(12.dp)
                         )
                     }
@@ -162,6 +174,11 @@ fun RecetteDetailScreen(
             }
         }
     }
+}
+
+/** "unité" veut dire "pas d'unité, juste la quantité" (œufs, gousses, tranches...). */
+private fun formatQuantiteUnite(quantite: String, unite: String): String {
+    return if (unite.isBlank() || unite == "unité") quantite else "$quantite $unite"
 }
 
 private fun arrondir(valeur: Double): String {

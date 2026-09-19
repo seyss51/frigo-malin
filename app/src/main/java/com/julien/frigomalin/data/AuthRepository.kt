@@ -26,4 +26,13 @@ class AuthRepository(private val auth: FirebaseAuth) {
     fun seDeconnecter() {
         auth.signOut()
     }
+
+    suspend fun reinitialiserMotDePasse(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

@@ -35,8 +35,17 @@ import com.julien.frigomalin.util.parserLigneIngredient
 private data class LigneIngredient(
     val nom: String = "",
     val quantite: String = "",
-    val unite: String = "g"
+    val unite: String = "g",
+    val menuUniteOuvert: Boolean = false
 )
+
+private val UNITES_RECETTE = listOf(
+    "g", "kg", "ml", "L", "cl", "cuillère à soupe", "cuillère à café", "unité"
+)
+
+/** "unité" veut dire "pas d'unité, juste la quantité" (œufs, gousses, tranches...). */
+private fun libelleUnite(unite: String): String =
+    if (unite == "unité") "aucune (ex: œufs)" else unite
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +59,13 @@ fun AjouterRecetteScreen(
     val estEdition = recetteExistante != null
 
     var nom by remember { mutableStateOf(recetteExistante?.recette?.nom ?: extraction?.titre ?: "") }
-    var instructions by remember { mutableStateOf(recetteExistante?.recette?.instructions ?: extraction?.instructions ?: "") }
+    var etapes by remember {
+        mutableStateOf(
+            recetteExistante?.recette?.instructions?.takeIf { it.isNotEmpty() }
+                ?: extraction?.instructions?.takeIf { it.isNotEmpty() }
+                ?: listOf("")
+        )
+    }
     var temps by remember { mutableStateOf(recetteExistante?.recette?.tempsPreparationMinutes?.toString() ?: extraction?.tempsMinutes?.toString() ?: "") }
     var portions by remember { mutableStateOf(recetteExistante?.recette?.portions?.toString() ?: extraction?.portions?.toString() ?: "4") }
     var photoNomFichier by remember { mutableStateOf(recetteExistante?.recette?.photoPath) }
@@ -66,7 +81,7 @@ fun AjouterRecetteScreen(
         )
     }
 
-    val extractionReussie = extraction != null && !extraction.instructions.isNullOrBlank()
+    val extractionReussie = extraction != null && extraction.instructions.isNotEmpty()
     val extractionPartielle = extraction != null && !extractionReussie
 
     val selecteurPhoto = rememberLauncherForActivityResult(
@@ -174,51 +189,130 @@ fun AjouterRecetteScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = instructions,
-                onValueChange = { instructions = it },
-                label = { Text("Instructions") },
-                minLines = 4,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text("Instructions", style = MaterialTheme.typography.titleMedium)
 
-            Text("Ingrédients nécessaires", style = MaterialTheme.typography.titleMedium)
-
-            lignesIngredients.forEachIndexed { index, ligne ->
+            etapes.forEachIndexed { index, etape ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
-                        value = ligne.nom,
-                        onValueChange = { nouveau ->
-                            lignesIngredients = lignesIngredients.toMutableList().also {
-                                it[index] = ligne.copy(nom = nouveau)
-                            }
-                        },
-                        label = { Text("Ingrédient") },
-                        modifier = Modifier.weight(2f)
+                    Text(
+                        "${index + 1}.",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 16.dp)
                     )
                     OutlinedTextField(
-                        value = ligne.quantite,
+                        value = etape,
                         onValueChange = { nouveau ->
-                            lignesIngredients = lignesIngredients.toMutableList().also {
-                                it[index] = ligne.copy(quantite = nouveau)
-                            }
+                            etapes = etapes.toMutableList().also { it[index] = nouveau }
                         },
-                        label = { Text("Qté") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        label = { Text("Étape ${index + 1}") },
+                        minLines = 2,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
                         onClick = {
-                            lignesIngredients = lignesIngredients.toMutableList().also {
-                                it.removeAt(index)
-                            }
+                            etapes = etapes.toMutableList().also { it.removeAt(index) }
                         }
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Retirer")
+                        Icon(Icons.Default.Close, contentDescription = "Retirer l'étape")
+                    }
+                }
+            }
+
+            OutlinedButton(
+                onClick = { etapes = etapes + "" },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("+ Ajouter une étape")
+            }
+
+            Text("Ingrédients nécessaires", style = MaterialTheme.typography.titleMedium)
+
+            lignesIngredients.forEachIndexed { index, ligne ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = ligne.nom,
+                                onValueChange = { nouveau ->
+                                    lignesIngredients = lignesIngredients.toMutableList().also {
+                                        it[index] = ligne.copy(nom = nouveau)
+                                    }
+                                },
+                                label = { Text("Ingrédient") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    lignesIngredients = lignesIngredients.toMutableList().also {
+                                        it.removeAt(index)
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Retirer")
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = ligne.quantite,
+                                onValueChange = { nouveau ->
+                                    lignesIngredients = lignesIngredients.toMutableList().also {
+                                        it[index] = ligne.copy(quantite = nouveau)
+                                    }
+                                },
+                                label = { Text("Qté") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ExposedDropdownMenuBox(
+                                expanded = ligne.menuUniteOuvert,
+                                onExpandedChange = { ouvert ->
+                                    lignesIngredients = lignesIngredients.toMutableList().also {
+                                        it[index] = ligne.copy(menuUniteOuvert = ouvert)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                OutlinedTextField(
+                                    value = libelleUnite(ligne.unite),
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Unité") },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = ligne.menuUniteOuvert,
+                                    onDismissRequest = {
+                                        lignesIngredients = lignesIngredients.toMutableList().also {
+                                            it[index] = ligne.copy(menuUniteOuvert = false)
+                                        }
+                                    }
+                                ) {
+                                    UNITES_RECETTE.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(libelleUnite(option)) },
+                                            onClick = {
+                                                lignesIngredients = lignesIngredients.toMutableList().also {
+                                                    it[index] = ligne.copy(unite = option, menuUniteOuvert = false)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -237,6 +331,7 @@ fun AjouterRecetteScreen(
                     if (nom.isBlank()) return@Button
                     val tempsValeur = temps.toIntOrNull() ?: 0
                     val portionsValeur = portions.toIntOrNull() ?: 4
+                    val etapesValides = etapes.map { it.trim() }.filter { it.isNotBlank() }
 
                     val ingredientsValides = lignesIngredients.mapNotNull { ligne ->
                         val quantiteValeur = ligne.quantite.toDoubleOrNull()
@@ -254,7 +349,7 @@ fun AjouterRecetteScreen(
                         Recette(
                             id = recetteExistante?.recette?.id ?: "",
                             nom = nom.trim(),
-                            instructions = instructions.trim(),
+                            instructions = etapesValides,
                             tempsPreparationMinutes = tempsValeur,
                             portions = portionsValeur,
                             estPersonnalisee = recetteExistante?.recette?.estPersonnalisee ?: true,

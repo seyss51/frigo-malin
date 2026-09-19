@@ -3,7 +3,7 @@ package com.julien.frigomalin.data
 data class Recette(
     val id: String = "",
     val nom: String = "",
-    val instructions: String = "",
+    val instructions: List<String> = emptyList(),
     val tempsPreparationMinutes: Int = 0,
     val portions: Int = 4,
     val estPersonnalisee: Boolean = false,
